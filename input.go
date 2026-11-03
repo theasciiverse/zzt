@@ -33,47 +33,56 @@ var (
 
 	KeysShiftHeld bool
 
-	keyChan chan byte
+	keyChan chan inputKey
 )
+
+// A key as it arrived, with whether Shift was held for it. (zztgo kept one
+// global Shift flag, the last key's, so a plain arrow queued behind a
+// Shift+arrow could shoot, or the other way round.)
+type inputKey struct {
+	key   byte
+	shift bool
+}
 
 // implementation uses: Dos, Crt, Keys, Sounds
 
 var (
 	InputLastDeltaX, InputLastDeltaY int16
-	InputKeyBuffer                   string
+	InputKeyBuffer                   []inputKey
 )
 
 func InputUpdate() {
-	InputUpdateWithKey(0)
+	InputUpdateWithKey(inputKey{})
 }
 
-func InputUpdateWithKey(keyRead byte) {
+func InputUpdateWithKey(keyRead inputKey) {
 	InputDeltaX = 0
 	InputDeltaY = 0
 	InputShiftPressed = false
 
-	if keyRead == 0 {
+	if keyRead.key == 0 {
 		checkForKeys := true
 		for checkForKeys {
 			select {
-			case key := <-keyChan:
-				InputKeyPressed = key
-				InputKeyBuffer += string([]byte{InputKeyPressed})
+			case k := <-keyChan:
+				InputKeyBuffer = append(InputKeyBuffer, k)
 			default:
 				checkForKeys = false
 			}
 		}
 	} else {
-		InputKeyPressed = keyRead
-		InputKeyBuffer += string([]byte{InputKeyPressed})
+		InputKeyBuffer = append(InputKeyBuffer, keyRead)
 	}
 
-	if Length(InputKeyBuffer) != 0 {
-		InputKeyPressed = InputKeyBuffer[0]
-		if Length(InputKeyBuffer) == 1 {
-			InputKeyBuffer = ""
+	shift := false
+	if len(InputKeyBuffer) != 0 {
+		InputKeyPressed = InputKeyBuffer[0].key
+		shift = InputKeyBuffer[0].shift
+		if len(InputKeyBuffer) == 1 {
+			InputKeyBuffer = nil
 		} else {
-			InputKeyBuffer = Copy(InputKeyBuffer, Length(InputKeyBuffer)-1, 1)
+			// as ZZT: keep only the next-to-last key
+			InputKeyBuffer = []inputKey{InputKeyBuffer[len(InputKeyBuffer)-2]}
 		}
 		switch InputKeyPressed {
 		case KEY_UP, '8':
@@ -93,7 +102,7 @@ func InputUpdateWithKey(keyRead byte) {
 		InputKeyPressed = '\x00'
 	}
 	if InputDeltaX != 0 || InputDeltaY != 0 {
-		InputShiftPressed = KeysShiftHeld
+		InputShiftPressed = shift
 	}
 	if InputDeltaX != 0 || InputDeltaY != 0 {
 		InputLastDeltaX = InputDeltaX
@@ -107,29 +116,30 @@ func InputReadWaitKey() {
 }
 
 func InputStartPoller(screen tcell.Screen) {
-	keyChan = make(chan byte)
+	keyChan = make(chan inputKey)
 	go InputKeyPoller(screen, keyChan)
 }
 
-func InputKeyPoller(screen tcell.Screen, keyChan chan byte) {
+func InputKeyPoller(screen tcell.Screen, keyChan chan inputKey) {
 	for {
 		event := screen.PollEvent()
 		switch event := event.(type) {
 		case *tcell.EventKey:
 			logf("key %s rune %q mods %d", event.Name(), event.Rune(), event.Modifiers())
 			// tcell v2 reads the modifier from the key itself (Shift+arrows shoot)
-			KeysShiftHeld = event.Modifiers()&tcell.ModShift != 0
+			shift := event.Modifiers()&tcell.ModShift != 0
+			KeysShiftHeld = shift
 
 			switch event.Key() {
 			case tcell.KeyRune:
 				r := event.Rune()
 				if r >= 32 && r <= 126 {
-					keyChan <- byte(r)
+					keyChan <- inputKey{byte(r), false}
 				}
 			default:
 				key := tcellToKey[event.Key()]
 				if key != 0 {
-					keyChan <- key
+					keyChan <- inputKey{key, shift}
 				}
 			}
 		case *tcell.EventResize:
@@ -141,25 +151,26 @@ func InputKeyPoller(screen tcell.Screen, keyChan chan byte) {
 }
 
 var tcellToKey = map[tcell.Key]byte{
-	tcell.KeyBackspace: KEY_BACKSPACE,
-	tcell.KeyCtrlY:     KEY_CTRL_Y,
-	tcell.KeyDelete:    KEY_DELETE,
-	tcell.KeyDown:      KEY_DOWN,
-	tcell.KeyEnd:       KEY_END,
-	tcell.KeyEnter:     KEY_ENTER,
-	tcell.KeyEscape:    KEY_ESCAPE,
-	tcell.KeyF1:        KEY_F1,
-	tcell.KeyF2:        KEY_F2,
-	tcell.KeyF3:        KEY_F3,
-	tcell.KeyF4:        KEY_F4,
-	tcell.KeyHome:      KEY_HOME,
-	tcell.KeyInsert:    KEY_INSERT,
-	tcell.KeyLeft:      KEY_LEFT,
-	tcell.KeyPgDn:      KEY_PAGE_DOWN,
-	tcell.KeyPgUp:      KEY_PAGE_UP,
-	tcell.KeyRight:     KEY_RIGHT,
-	tcell.KeyTab:       KEY_TAB,
-	tcell.KeyUp:        KEY_UP,
+	tcell.KeyBackspace:  KEY_BACKSPACE,
+	tcell.KeyBackspace2: KEY_BACKSPACE, // the DEL most terminals send
+	tcell.KeyCtrlY:      KEY_CTRL_Y,
+	tcell.KeyDelete:     KEY_DELETE,
+	tcell.KeyDown:       KEY_DOWN,
+	tcell.KeyEnd:        KEY_END,
+	tcell.KeyEnter:      KEY_ENTER,
+	tcell.KeyEscape:     KEY_ESCAPE,
+	tcell.KeyF1:         KEY_F1,
+	tcell.KeyF2:         KEY_F2,
+	tcell.KeyF3:         KEY_F3,
+	tcell.KeyF4:         KEY_F4,
+	tcell.KeyHome:       KEY_HOME,
+	tcell.KeyInsert:     KEY_INSERT,
+	tcell.KeyLeft:       KEY_LEFT,
+	tcell.KeyPgDn:       KEY_PAGE_DOWN,
+	tcell.KeyPgUp:       KEY_PAGE_UP,
+	tcell.KeyRight:      KEY_RIGHT,
+	tcell.KeyTab:        KEY_TAB,
+	tcell.KeyUp:         KEY_UP,
 }
 
 func init() {
@@ -168,5 +179,5 @@ func init() {
 	InputDeltaX = 0
 	InputDeltaY = 0
 	InputShiftPressed = false
-	InputKeyBuffer = ""
+	InputKeyBuffer = nil
 }
