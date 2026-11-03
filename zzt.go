@@ -81,6 +81,15 @@ func main() {
 	EditorEnabled = true
 
 	logf("start zzt %s world %s muted %v", version, StartupWorldFileName, muted)
+	// a crash gives the terminal back before the error is shown
+	defer func() {
+		if r := recover(); r != nil {
+			if screen != nil {
+				screen.Fini()
+			}
+			panic(r)
+		}
+	}()
 	AudioInstall(muted)
 	SoundEnabled = !muted
 	VideoInstall()

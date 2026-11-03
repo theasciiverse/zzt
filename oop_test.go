@@ -125,3 +125,11 @@ func TestStatlessTileDoesNotCrash(t *testing.T) {
 	MoveStat(-1, 1, 1)
 	RemoveStat(-1)
 }
+
+func TestKeyNames(t *testing.T) {
+	for key, want := range map[int16]string{0: "Black", 1: "Blue", 5: "Purple", 7: "White"} {
+		if got := keyName(key); got != want {
+			t.Fatalf("key %d named %q, want %q", key, got, want)
+		}
+	}
+}

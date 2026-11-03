@@ -955,7 +955,7 @@ func keyName(key int16) string {
 	if key == 0 {
 		return "Black"
 	}
-	return keyName(key)
+	return ColorNames[key-1]
 }
 
 func ElementKeyTouch(x, y int16, sourceStatId int16, deltaX, deltaY *int16) {
