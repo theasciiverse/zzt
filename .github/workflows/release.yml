@@ -1,0 +1,130 @@
+# Asciiverse release workflow (tag v* or run by hand with a tag)
+# Builds ZZT for the Asciiverse catalog: one archive per target, named
+# <id>-<target>.tar.gz (Linux, macOS) or .zip (Windows), plus a SHA256SUMS
+# file, attached to a GitHub release (hub/catalog/SCHEMA.md,
+# release.source = "github").
+#
+# Tags look like v0.9.0. Linux builds use cgo for sound (oto's ALSA output,
+# linked dynamically, so the binary needs libasound2, the manifest's
+# system_deps); they are built on Ubuntu 22.04 and run on glibc 2.35 and
+# newer. macOS (Core Audio) and Windows (WASAPI) need no cgo and are
+# cross-compiled. Town of ZZT, the demo world and the help are built in.
+# The archives carry README.md, LICENSE.txt (zztgo) and
+# LICENSE-reconstruction (the Reconstruction of ZZT).
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "existing tag to build and release"
+        required: true
+
+env:
+  ID: zzt
+  BIN: zzt
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-unknown-linux-gnu, runner: ubuntu-22.04 }
+          - { target: aarch64-unknown-linux-gnu, runner: ubuntu-22.04-arm }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev pkg-config
+          CGO_ENABLED=1 go build -trimpath -ldflags "-s -w" -o $BIN .
+          file $BIN
+          # libc, libpthread, libdl, and libasound, which the manifest declares
+          ldd $BIN
+          ! ldd $BIN | grep -v -E 'linux-vdso|libc\.so|libm\.so|libpthread|libdl|libresolv|ld-linux|libasound'
+
+      - name: Test
+        run: go test ./...
+
+      - name: Package for av
+        run: |
+          # the binary sits at the top of the archive, where av looks for it
+          mkdir -p stage dist
+          cp $BIN README.md LICENSE.txt LICENSE-reconstruction stage/
+          tar -czf "dist/$ID-${{ matrix.target }}.tar.gz" -C stage .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*
+
+  cross:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build and package
+        run: |
+          mkdir -p dist
+          build() { # goos goarch target
+            out="stage-$3"; mkdir -p "$out"
+            exe="$BIN"; [ "$1" = windows ] && exe="$BIN.exe"
+            CGO_ENABLED=0 GOOS=$1 GOARCH=$2 go build -trimpath -ldflags "-s -w" -o "$out/$exe" .
+            cp README.md LICENSE.txt LICENSE-reconstruction "$out/"
+            if [ "$1" = windows ]; then (cd "$out" && zip -q -r "../dist/$ID-$3.zip" .)
+            else tar -czf "dist/$ID-$3.tar.gz" -C "$out" .; fi
+          }
+          build darwin  amd64 x86_64-apple-darwin
+          build darwin  arm64 aarch64-apple-darwin
+          build windows amd64 x86_64-pc-windows-msvc
+          build windows arm64 aarch64-pc-windows-msvc
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cross
+          path: dist/*
+
+  release:
+    needs: [linux, cross]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS && cat SHA256SUMS
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$TAG" -R "$GITHUB_REPOSITORY" --title "ZZT $TAG" \
+                 --notes "ZZT, Tim Sweeney's 1991 text-mode adventure and world editor, in Go from the Reconstruction of ZZT by way of zztgo, with Town of ZZT and the demo world built in. Its README lists the keys."
+          gh release upload "$TAG" dist/* -R "$GITHUB_REPOSITORY" --clobber

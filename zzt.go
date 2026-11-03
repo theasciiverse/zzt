@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-const version = "3.2.0"
+const version = "0.9.0" // ours; the game is ZZT 3.2
 
 const help = `zzt [WORLD] [--mute]
 
@@ -46,7 +46,7 @@ func main() {
 			fmt.Print(help)
 			return
 		case a == "--version" || a == "-V":
-			fmt.Println("zzt", version)
+			fmt.Println("zzt", version, "(ZZT 3.2)")
 			return
 		case a == "--mute":
 			muted = true
