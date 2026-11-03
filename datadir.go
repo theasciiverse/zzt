@@ -3,8 +3,8 @@ package main
 // Where ZZT keeps its files. ZZT worked in the current directory: worlds,
 // saved games (.SAV), high scores (.HI) and exported boards (.BRD) all
 // side by side, and W listed the worlds there. This keeps that, in one
-// folder per player: the data folder, with Town of ZZT and the demo world
-// put there on first run. A world named on the command line by its path
+// folder per player: the data folder, with the demo world put there on
+// first run (Epic's worlds are read from zzt.zip, see epicworlds.go). A world named on the command line by its path
 // (zzt ~/worlds/FOO.ZZT) is played from its own folder instead.
 
 import (
@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-//go:embed TOWN.ZZT DEMO.ZZT
+//go:embed DEMO.ZZT
 var bundledWorlds embed.FS
 
 func dataDir() string {

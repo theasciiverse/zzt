@@ -7,6 +7,7 @@ In January 1991 Tim Sweeney, a mechanical engineering student, released ZZT from
 This is ZZT 3.2 in your terminal, rebuilt from Adrian Siekierka's Reconstruction of ZZT, the original source recreated byte for byte, by way of Ben Hoyt's Go translation.
 
 - **Town of ZZT**, the original adventure: find the five purple keys and reach the palace
+- **The Caves, the Dungeons and the Underground City of ZZT**, the three worlds that were once sent by mail to paying players, and the **Guided Tour** of them
 - **The demo world**, a guided tour of every creature, item and terrain
 - **The world editor** with ZZT-OOP, the little language every object speaks; export and import boards
 - **The PC speaker**, synthesised: every bleep, drum and tune, at ZZT's own 18.2 Hz
@@ -27,13 +28,14 @@ This is ZZT 3.2 in your terminal, rebuilt from Adrian Siekierka's Reconstruction
 - `zzt WORLD`: start with another world (`zzt DEMO`), or a world file by its path (`zzt ~/worlds/FOO.ZZT`), which then plays from its own folder
 - `--mute`: start with the sound off
 
-Worlds, saved games and high scores live in the data folder: `~/.local/share/zzt` on Linux, `~/Library/Application Support/zzt` on macOS, `%AppData%\zzt` on Windows.
+Epic's worlds are read from `zzt.zip`, Epic's own package, kept beside the game exactly as it came. Your worlds, saved games and high scores live in the data folder: `~/.local/share/zzt` on Linux, `~/Library/Application Support/zzt` on macOS, `%AppData%\zzt` on Windows.
 
 Session log: `ZZT_LOG=1 zzt 2>zzt.log`
 
 ## Credits
 
 - ZZT: Tim Sweeney, Epic MegaGames, 1991
+- Town, Caves, Dungeons, City, the Tour and the demo: Epic MegaGames (`zzt.zip`, with its own licence inside)
 - The Reconstruction of ZZT: Adrian Siekierka, 2020 (MIT, with Tim Sweeney's permission; `LICENSE-reconstruction`); its documentation and demo world are built in
 - zztgo, the Go translation: Ben Hoyt, 2020 (MIT; `LICENSE.txt`)
 - Sound, timing, keys, help, the data folder and the ZZT-OOP fixes: Asciiverse

@@ -2,7 +2,6 @@ package main // unit: Game
 
 import (
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -588,7 +587,7 @@ func WorldLoad(filename, extension string, titleOnly bool) (WorldLoad bool) {
 	SidebarClearLine(5)
 	VideoWriteText(62, 5, 0x1F, "Loading.....")
 
-	f, err := os.Open(filename + extension)
+	f, err := openGameFile(filename + extension)
 	if DisplayIOError(err) {
 		return
 	}
@@ -729,8 +728,7 @@ func GameWorldLoad(extension string) (GameWorldLoad bool) {
 	GameWorldLoad = false
 	textWindow.Selectable = true
 
-	matches, err := filepath.Glob("*" + extension)
-	if err == nil {
+	if matches := gameFiles(extension); true {
 		for _, match := range matches {
 			entryName = match[:len(match)-4]
 			for i = 1; i <= WorldFileDescCount; i++ {
@@ -791,7 +789,7 @@ func HighScoresAdd(score int16) {
 }
 
 func HighScoresLoad() {
-	f, err := os.Open(World.Info.Name + ".HI")
+	f, err := openGameFile(World.Info.Name + ".HI")
 	if err == nil {
 		buf := make([]byte, SizeOfHighScoreList)
 		_, err = f.Read(buf)

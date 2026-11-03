@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-const version = "0.9.0" // ours; the game is ZZT 3.2
+const version = "1.0.0" // ours; the game is ZZT 3.2
 
 const help = `zzt [WORLD] [--mute]
 
@@ -71,6 +71,7 @@ func main() {
 	WorldFileDescKeys[6] = "TOUR"
 	WorldFileDescValues[6] = "TOUR       Guided Tour ZZT's Other Worlds"
 
+	EpicWorldsOpen()
 	startWorld = DataDirSetup(startWorld)
 	StartupWorldFileName = "TOWN"
 	if startWorld != "" {

@@ -8,9 +8,12 @@
 # linked dynamically, so the binary needs libasound2, the manifest's
 # system_deps); they are built on Ubuntu 22.04 and run on glibc 2.35 and
 # newer. macOS (Core Audio) and Windows (WASAPI) need no cgo and are
-# cross-compiled. Town of ZZT, the demo world and the help are built in.
-# The archives carry README.md, LICENSE.txt (zztgo) and
-# LICENSE-reconstruction (the Reconstruction of ZZT).
+# cross-compiled. The demo world and the help are built in. The archives
+# carry README.md, LICENSE.txt (zztgo), LICENSE-reconstruction (the
+# Reconstruction of ZZT) and Epic's zzt.zip exactly as Epic made it
+# available in 1997 (its licence allows it only whole and unaltered; the
+# tests check its sha256): the game reads Town, Caves, Dungeons, City and
+# the Tour from inside it.
 
 name: release
 
@@ -66,7 +69,7 @@ jobs:
         run: |
           # the binary sits at the top of the archive, where av looks for it
           mkdir -p stage dist
-          cp $BIN README.md LICENSE.txt LICENSE-reconstruction stage/
+          cp $BIN README.md LICENSE.txt LICENSE-reconstruction epic/zzt.zip stage/
           tar -czf "dist/$ID-${{ matrix.target }}.tar.gz" -C stage .
 
       - uses: actions/upload-artifact@v4
@@ -92,7 +95,7 @@ jobs:
             out="stage-$3"; mkdir -p "$out"
             exe="$BIN"; [ "$1" = windows ] && exe="$BIN.exe"
             CGO_ENABLED=0 GOOS=$1 GOARCH=$2 go build -trimpath -ldflags "-s -w" -o "$out/$exe" .
-            cp README.md LICENSE.txt LICENSE-reconstruction "$out/"
+            cp README.md LICENSE.txt LICENSE-reconstruction epic/zzt.zip "$out/"
             if [ "$1" = windows ]; then (cd "$out" && zip -q -r "../dist/$ID-$3.zip" .)
             else tar -czf "dist/$ID-$3.tar.gz" -C "$out" .; fi
           }
@@ -126,5 +129,5 @@ jobs:
         run: |
           gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
             || gh release create "$TAG" -R "$GITHUB_REPOSITORY" --title "ZZT $TAG" \
-                 --notes "ZZT, Tim Sweeney's 1991 text-mode adventure and world editor, in Go from the Reconstruction of ZZT by way of zztgo, with Town of ZZT and the demo world built in. Its README lists the keys."
+                 --notes "ZZT, Tim Sweeney's 1991 text-mode adventure and world editor, in Go from the Reconstruction of ZZT by way of zztgo, with Epic's official worlds. Its README lists the keys."
           gh release upload "$TAG" dist/* -R "$GITHUB_REPOSITORY" --clobber

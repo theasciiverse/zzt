@@ -84,9 +84,17 @@ in colour, sidebar, moving about. Gaps, from Ben Hoyt's write-up
 7. Session logging, data folder: **done** (`ZZT_LOG=1 zzt 2>zzt.log`;
    `datadir.go`: XDG data home on Linux, Town and Demo put there on first
    run, a world given by path plays from its own folder)
-8. Worlds: Town and Demo bundled now; the 1997 terms above allow passing
-   on zzt.zip only whole and unaltered, so the other worlds would come from
-   that zip as is (read from it, not extracted into ours); David to decide
+8. Worlds: **done** (David, 2026-11-03: ship Epic's zzt.zip whole). The
+   zip is `epic/zzt.zip`, byte for byte as on the Museum of ZZT (sha256
+   fdf5a0f9...5e, checked by `TestEpicZipUnaltered`); `epicworlds.go` reads
+   worlds and TOWN.HI from inside it (beside the binary, or `epic/` in the
+   source tree) and lists them under W; a file of the same name in the
+   data folder comes first. TOWN.ZZT is no longer in the repo or built in.
+   The release archives carry the zip next to the binary. DEMO.ZZT stays
+   built in (the Reconstruction's MIT release; the same bytes as Epic's).
+   Page and README never call the worlds freeware (clause 3); Epic credited.
+
+1.0.0: everything planned is in.
 
 ## Notes
 
