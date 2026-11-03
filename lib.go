@@ -117,11 +117,11 @@ func Delay(milliseconds int16) {
 }
 
 func Sound(x uint16) {
-	// TODO
+	speakerFreq.Store(uint32(x))
 }
 
 func NoSound() {
-	// TODO
+	speakerFreq.Store(0)
 }
 
 // Math functions

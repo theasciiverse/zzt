@@ -5,7 +5,6 @@ TODO:
 - ensure len>0 for things like: switch state.Lines[lpos-1][0]
 - timer handling, timeout of message display
 - editor: EditorTransferBoard
-- sounds
 - performance
   + optimize when to call VideoShow
   + stat.Data should probably be []byte instead of string
@@ -13,7 +12,44 @@ TODO:
 
 package main
 
+import (
+	"fmt"
+	"os"
+	"strings"
+)
+
+const version = "3.2.0"
+
+const help = `zzt [WORLD] [--mute]
+
+ZZT, Tim Sweeney's 1991 text-mode adventure and world editor. Starts on
+the title screen with WORLD (default TOWN, The Town of ZZT); W picks another
+world, P plays, E opens the editor. In play: arrows move, Shift+arrows (or
+Space) shoot, T torch, B sound off and on, S save, P pause, Esc quits.
+
+  --mute     start with the sound off
+
+Logging: ZZT_LOG=1 zzt 2>zzt.log
+`
+
 func main() {
+	muted := false
+	startWorld := ""
+	for _, a := range os.Args[1:] {
+		switch {
+		case a == "--help" || a == "-h":
+			fmt.Print(help)
+			return
+		case a == "--version" || a == "-V":
+			fmt.Println("zzt", version)
+			return
+		case a == "--mute":
+			muted = true
+		case !strings.HasPrefix(a, "-"):
+			startWorld = strings.TrimSuffix(strings.TrimSuffix(a, ".ZZT"), ".zzt")
+		}
+	}
+
 	WorldFileDescCount = 7
 	WorldFileDescKeys[0] = "TOWN"
 	WorldFileDescValues[0] = "TOWN       The Town of ZZT"
@@ -31,10 +67,16 @@ func main() {
 	WorldFileDescValues[6] = "TOUR       Guided Tour ZZT's Other Worlds"
 
 	StartupWorldFileName = "TOWN"
+	if startWorld != "" {
+		StartupWorldFileName = startWorld
+	}
 	ResourceDataFileName = "ZZT.DAT"
 	GameTitleExitRequested = false
 	EditorEnabled = true
 
+	logf("start zzt %s world %s muted %v", version, StartupWorldFileName, muted)
+	AudioInstall(muted)
+	SoundEnabled = !muted
 	VideoInstall()
 	TextWindowInit(5, 3, 50, 18)
 	VideoHideCursor()

@@ -29,24 +29,28 @@ var (
 // implementation uses: Crt, Dos
 
 func SoundQueue(priority int16, pattern string) {
-	// if !SoundBlockQueueing && (!SoundIsPlaying || (priority >= SoundCurrentPriority && SoundCurrentPriority != -1 || priority == -1)) {
-	// 	if priority >= 0 || !SoundIsPlaying {
-	// 		SoundCurrentPriority = priority
-	// 		SoundBuffer = pattern
-	// 		SoundBufferPos = 1
-	// 		SoundDurationCounter = 1
-	// 	} else {
-	// 		SoundBuffer = Copy(SoundBuffer, SoundBufferPos, Length(SoundBuffer)-SoundBufferPos+1)
-	// 		SoundBufferPos = 1
-	// 		if Length(SoundBuffer)+Length(pattern) < 255 {
-	// 			SoundBuffer += pattern
-	// 		}
-	// 	}
-	// 	SoundIsPlaying = true
-	// }
+	soundMu.Lock()
+	defer soundMu.Unlock()
+	if !SoundBlockQueueing && (!SoundIsPlaying || (priority >= SoundCurrentPriority && SoundCurrentPriority != -1 || priority == -1)) {
+		if priority >= 0 || !SoundIsPlaying {
+			SoundCurrentPriority = priority
+			SoundBuffer = pattern
+			SoundBufferPos = 1
+			SoundDurationCounter = 1
+		} else {
+			SoundBuffer = Copy(SoundBuffer, SoundBufferPos, Length(SoundBuffer)-SoundBufferPos+1)
+			SoundBufferPos = 1
+			if Length(SoundBuffer)+Length(pattern) < 255 {
+				SoundBuffer += pattern
+			}
+		}
+		SoundIsPlaying = true
+	}
 }
 
 func SoundClearQueue() {
+	soundMu.Lock()
+	defer soundMu.Unlock()
 	SoundBuffer = ""
 	SoundIsPlaying = false
 	NoSound()
