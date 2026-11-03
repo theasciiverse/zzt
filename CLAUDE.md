@@ -17,12 +17,20 @@ the arrow keys, not a parser text adventure).
   Reconstruction converted to Go with his own Pascal-to-Go converter, on the
   tcell terminal library. 37 commits, last 2020-05-29. This repo is it,
   `upstream` its remote, our work on the `asciiverse` branch.
-- **Worlds:** zztgo bundles TOWN.ZZT, Town of ZZT, the original shareware
-  world (always free to share). The other official worlds (Caves, Dungeons,
-  City) were made freeware on 1997-10-10 (Wikipedia, Museum of ZZT); the
-  exact terms of that release not yet found, confirm before bundling. The
-  Reconstruction ships DEMO.ZZT. The Museum of ZZT holds 3,000+ community
-  worlds, each under its own author's terms.
+- **Worlds:** zztgo bundles TOWN.ZZT. The Reconstruction ships DEMO.ZZT
+  (in its MIT release). The other official worlds (Caves, Dungeons, City,
+  Tour) and Town came free on 1997-10-10 in Epic's zzt.zip (Museum of ZZT,
+  museumofzzt.com/file/z/zzt.zip), under Epic's "Software License
+  Agreement" (license.txt / LICENSE.DOC, 1997-10-09), read 2026-11-03:
+  distributed at no cost but "NOT public domain or free software or
+  'freeware'" (clause 3: must not be described so); copy and distribute
+  "only in its original, unaltered form, with all files included
+  unmodified", as a complete package, no added or renamed files except
+  installation routines (4); no derivative works (5); no fee beyond a
+  distribution cost (6); Epic credited as owner (2); online distribution
+  allowed under those terms; no CD-ROM, retail or cover disks. The
+  Museum of ZZT holds 3,000+ community worlds, each under its own
+  author's terms.
 
 ## State found (2026-11-03)
 
@@ -50,12 +58,28 @@ in colour, sidebar, moving about. Gaps, from Ben Hoyt's write-up
 
 ## Plan
 
-1. Flush once per frame; real tick timing
-2. Shooting that works in every terminal
-3. Sound
-4. The PC character set in Unicode, no special font
-5. ZZT-OOP: check bugs against the Reconstruction (DEMO.ZZT, Town)
-6. About screen, editor transfer
-7. Session logging, saves and high scores in the data folder, worlds found
-   beside the binary
-8. Worlds: Town and Demo; the other three once the 1997 terms are confirmed
+1. Flush once per frame; real tick timing: **done** (writes mark the
+   screen dirty, a 60 Hz ticker shows it; time in PC timer ticks x 6 as in
+   ZZT, 9.1 cycles a second at the default speed; ~1% CPU in play)
+2. Shooting in every terminal: **done** (tcell v2 reads Shift on all four
+   arrows; Space shoots too, as in ZZT)
+3. Sound: **done** (`audio.go`: the 18.2 Hz timer as a goroutine, a square
+   wave through oto v3, eased on and off; silent without a device; B and
+   `--mute`)
+4. The PC character set in Unicode: was already done (`codePage437ToRune`);
+   colours now the exact EGA palette
+5. ZZT-OOP: line-by-line comparison against the Reconstruction under way
+6. About screen, editor transfer: **done** (help from the Reconstruction's
+   DOC/*.HLP embedded, `help/`; About at start; T in the editor)
+7. Session logging, data folder: **done** (`ZZT_LOG=1 zzt 2>zzt.log`;
+   `datadir.go`: XDG data home on Linux, Town and Demo put there on first
+   run, a world given by path plays from its own folder)
+8. Worlds: Town and Demo bundled now; the 1997 terms above allow passing
+   on zzt.zip only whole and unaltered, so the other worlds would come from
+   that zip as is (read from it, not extracted into ours); David to decide
+
+## Notes
+
+- castrec keys `sup sdown sleft sright` send Shift+arrows (added for this).
+- A fresh world in the editor asks for the room title first.
+- `SoundFreqTable` truncates 32 * 2^3 to 255 Hz, as the float maths gives.
