@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 )
 
 var screen tcell.Screen
@@ -116,23 +116,24 @@ const (
 	CrtWhite        = 15
 )
 
+// The EGA palette ZZT was drawn in, exactly, whatever the terminal's theme.
 var crtColorToTcell = [16]tcell.Color{
-	CrtBlack:        tcell.ColorBlack,
-	CrtBlue:         tcell.ColorNavy,
-	CrtGreen:        tcell.ColorGreen,
-	CrtCyan:         tcell.ColorTeal,
-	CrtRed:          tcell.ColorMaroon,
-	CrtMagenta:      tcell.ColorPurple,
-	CrtBrown:        tcell.ColorOlive,
-	CrtLightGray:    tcell.ColorSilver,
-	CrtDarkGray:     tcell.ColorGray,
-	CrtLightBlue:    tcell.ColorBlue,
-	CrtLightGreen:   tcell.ColorLime,
-	CrtLightCyan:    tcell.ColorAqua,
-	CrtLightRed:     tcell.ColorRed,
-	CrtLightMagenta: tcell.ColorFuchsia,
-	CrtYellow:       tcell.ColorYellow,
-	CrtWhite:        tcell.ColorWhite,
+	CrtBlack:        tcell.NewHexColor(0x000000),
+	CrtBlue:         tcell.NewHexColor(0x0000AA),
+	CrtGreen:        tcell.NewHexColor(0x00AA00),
+	CrtCyan:         tcell.NewHexColor(0x00AAAA),
+	CrtRed:          tcell.NewHexColor(0xAA0000),
+	CrtMagenta:      tcell.NewHexColor(0xAA00AA),
+	CrtBrown:        tcell.NewHexColor(0xAA5500),
+	CrtLightGray:    tcell.NewHexColor(0xAAAAAA),
+	CrtDarkGray:     tcell.NewHexColor(0x555555),
+	CrtLightBlue:    tcell.NewHexColor(0x5555FF),
+	CrtLightGreen:   tcell.NewHexColor(0x55FF55),
+	CrtLightCyan:    tcell.NewHexColor(0x55FFFF),
+	CrtLightRed:     tcell.NewHexColor(0xFF5555),
+	CrtLightMagenta: tcell.NewHexColor(0xFF55FF),
+	CrtYellow:       tcell.NewHexColor(0xFFFF55),
+	CrtWhite:        tcell.NewHexColor(0xFFFFFF),
 }
 
 var codePage437ToRune = [256]rune{

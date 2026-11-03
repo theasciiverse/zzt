@@ -1,7 +1,7 @@
 package main // unit: Input
 
 import (
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 )
 
 const (
@@ -116,7 +116,7 @@ func InputKeyPoller(screen tcell.Screen, keyChan chan byte) {
 		event := screen.PollEvent()
 		switch event := event.(type) {
 		case *tcell.EventKey:
-			// TODO: this doesn't work for shift-up and shift-down in tcell :-(
+			// tcell v2 reads the modifier from the key itself (Shift+arrows shoot)
 			KeysShiftHeld = event.Modifiers()&tcell.ModShift != 0
 
 			switch event.Key() {
