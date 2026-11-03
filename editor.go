@@ -1,6 +1,8 @@
 package main // unit: Editor
 
 import (
+	"fmt"
+	"os"
 	"time"
 )
 
@@ -418,64 +420,50 @@ func EditorLoop() {
 		}
 	}
 
-	// TODO
-	//EditorTransferBoard := func() {
-	//	var (
-	//		i byte
-	//		f *File
-	//	)
-	//	i = 1
-	//	SidebarPromptChoice(true, 3, "Transfer board:", "Import Export", &i)
-	//	if InputKeyPressed != KEY_ESCAPE {
-	//		if i == 0 {
-	//			SidebarPromptString("Import board", ".BRD", &SavedBoardFileName, PROMPT_ALPHANUM)
-	//			if InputKeyPressed != KEY_ESCAPE && Length(SavedBoardFileName) != 0 {
-	//				Assign(f, SavedBoardFileName+".BRD")
-	//				Reset(f, 1)
-	//				if DisplayIOError() {
-	//					goto TransferEnd
-	//				}
-	//				BoardClose()
-	//				BlockRead(f, World.BoardLen[World.Info.CurrentBoard], 2)
-	//				if !DisplayIOError() {
-	//					World.BoardData[World.Info.CurrentBoard] = make([]byte, World.BoardLen[World.Info.CurrentBoard])
-	//					BlockRead(f, *World.BoardData[World.Info.CurrentBoard], World.BoardLen[World.Info.CurrentBoard])
-	//				}
-	//				if DisplayIOError() {
-	//					World.BoardLen[World.Info.CurrentBoard] = 0
-	//					BoardCreate()
-	//					EditorDrawRefresh()
-	//				} else {
-	//					BoardOpen(World.Info.CurrentBoard)
-	//					EditorDrawRefresh()
-	//					for i = 0; i <= 3; i++ {
-	//						Board.Info.NeighborBoards[i] = 0
-	//					}
-	//				}
-	//			}
-	//		} else if i == 1 {
-	//			SidebarPromptString("Export board", ".BRD", &SavedBoardFileName, PROMPT_ALPHANUM)
-	//			if InputKeyPressed != KEY_ESCAPE && Length(SavedBoardFileName) != 0 {
-	//				Assign(f, SavedBoardFileName+".BRD")
-	//				Rewrite(f, 1)
-	//				if DisplayIOError() {
-	//					goto TransferEnd
-	//				}
-	//				BoardClose()
-	//				BlockWrite(f, World.BoardLen[World.Info.CurrentBoard], 2)
-	//				BlockWrite(f, *World.BoardData[World.Info.CurrentBoard], World.BoardLen[World.Info.CurrentBoard])
-	//				BoardOpen(World.Info.CurrentBoard)
-	//				if DisplayIOError() {
-	//				} else {
-	//					Close(f)
-	//				}
-	//			}
-	//		}
-	//
-	//	}
-	//TransferEnd:
-	//	EditorDrawSidebar()
-	//}
+	// Import or export the current board as a .BRD file: the board's length
+	// as two bytes, then its packed data, as stored in a world.
+	EditorTransferBoard := func() {
+		defer EditorDrawSidebar()
+		var i byte = 1
+		SidebarPromptChoice(true, 3, "Transfer board:", "Import Export", &i)
+		if InputKeyPressed == KEY_ESCAPE {
+			return
+		}
+		cur := World.Info.CurrentBoard
+		if i == 0 {
+			SidebarPromptString("Import board", ".BRD", &SavedBoardFileName, PROMPT_ALPHANUM)
+			if InputKeyPressed == KEY_ESCAPE || Length(SavedBoardFileName) == 0 {
+				return
+			}
+			data, err := os.ReadFile(SavedBoardFileName + ".BRD")
+			if err == nil && (len(data) < 2 || int(uint16(LoadInt16(data))) > len(data)-2) {
+				err = fmt.Errorf("not a board file")
+			}
+			if DisplayIOError(err) {
+				return
+			}
+			BoardClose()
+			n := int(uint16(LoadInt16(data)))
+			World.BoardLen[cur] = int16(n)
+			World.BoardData[cur] = append([]byte(nil), data[2:2+n]...)
+			BoardOpen(cur)
+			for j := 0; j < 4; j++ {
+				Board.Info.NeighborBoards[j] = 0
+			}
+			EditorDrawRefresh()
+		} else if i == 1 {
+			SidebarPromptString("Export board", ".BRD", &SavedBoardFileName, PROMPT_ALPHANUM)
+			if InputKeyPressed == KEY_ESCAPE || Length(SavedBoardFileName) == 0 {
+				return
+			}
+			BoardClose()
+			out := make([]byte, 2, 2+len(World.BoardData[cur]))
+			StoreInt16(out, World.BoardLen[cur])
+			out = append(out, World.BoardData[cur]...)
+			BoardOpen(cur)
+			DisplayIOError(os.WriteFile(SavedBoardFileName+".BRD", out, 0o644))
+		}
+	}
 
 	EditorFloodFill := func(x, y int16, from TTile) {
 		var (
@@ -787,8 +775,8 @@ func EditorLoop() {
 		case '!':
 			EditorEditHelpFile()
 			EditorDrawSidebar()
-		//case 'T':
-		//	EditorTransferBoard() // TODO
+		case 'T':
+			EditorTransferBoard()
 		case KEY_ENTER:
 			if GetStatIdAt(cursorX, cursorY) >= 0 {
 				EditorEditStat(GetStatIdAt(cursorX, cursorY))

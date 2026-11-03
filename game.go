@@ -543,8 +543,11 @@ func DisplayIOError(err error) (DisplayIOError bool) {
 		return
 	}
 	DisplayIOError = true
-	textWindow.Title = err.Error()[:40]
-	textWindow.Title = "Error: " + textWindow.Title
+	msg := err.Error()
+	if len(msg) > 40 {
+		msg = msg[:40]
+	}
+	textWindow.Title = "Error: " + msg
 	TextWindowInitState(&textWindow)
 	TextWindowAppend(&textWindow, "OS Error:")
 	TextWindowAppend(&textWindow, "")
