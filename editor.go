@@ -307,7 +307,8 @@ func EditorLoop() {
 			buf = append(buf, '\r')
 			stat.DataLen += Length(state.Lines[i]) + 1
 		}
-		stat.Data = string(buf)
+		data := string(buf)
+		stat.Data = &data
 
 		TextWindowFree(&state)
 		TextWindowDrawClose(&state)

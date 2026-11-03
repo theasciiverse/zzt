@@ -105,7 +105,7 @@ func BoardClose() {
 		stat := &Board.Stats[ix]
 		if stat.DataLen > 0 {
 			for iy = 1; iy <= ix-1; iy++ {
-				if Board.Stats[iy].Data == stat.Data {
+				if Board.Stats[iy].Data == stat.Data && Board.Stats[iy].DataLen > 0 {
 					stat.DataLen = -iy
 				}
 			}
@@ -114,7 +114,7 @@ func BoardClose() {
 		ptr = ptr[SizeOfStat:]
 
 		if stat.DataLen > 0 {
-			copy(ptr[:stat.DataLen], stat.Data)
+			copy(ptr[:stat.DataLen], *stat.Data)
 			ptr = ptr[stat.DataLen:]
 		}
 	}
@@ -170,7 +170,8 @@ func BoardOpen(boardId int16) {
 		ptr = ptr[SizeOfStat:]
 
 		if stat.DataLen > 0 {
-			stat.Data = string(ptr[:stat.DataLen])
+			data := string(ptr[:stat.DataLen])
+			stat.Data = &data
 			ptr = ptr[stat.DataLen:]
 		} else if stat.DataLen < 0 {
 			stat.Data = Board.Stats[-stat.DataLen].Data
@@ -231,7 +232,7 @@ func BoardCreate() {
 	Board.Stats[0].Cycle = 1
 	Board.Stats[0].Under.Element = E_EMPTY
 	Board.Stats[0].Under.Color = 0
-	Board.Stats[0].Data = ""
+	Board.Stats[0].Data = nil
 	Board.Stats[0].DataLen = 0
 }
 
@@ -671,7 +672,7 @@ func WorldSave(filename, extension string) {
 
 	ptr = IoTmpBuf[:]
 	for i := 0; i < 512; i++ {
-		ptr[0] = 0
+		ptr[i] = 0
 	}
 	StoreInt16(ptr[:2], -1)
 	ptr = ptr[2:]
@@ -854,7 +855,7 @@ func CopyStatDataToTextWindow(statId int16, state *TTextWindowState) {
 
 	var dataBuf []byte
 	for i := 0; i < int(stat.DataLen); i++ {
-		dataChr := stat.Data[i]
+		dataChr := (*stat.Data)[i]
 		if dataChr == KEY_ENTER {
 			TextWindowAppend(state, string(dataBuf))
 			dataBuf = dataBuf[:0]
@@ -874,8 +875,10 @@ func AddStat(tx, ty int16, element byte, color, tcycle int16, template TStat) {
 		stat.Cycle = tcycle
 		stat.Under = Board.Tiles[tx][ty]
 		stat.DataPos = 0
-		if template.Data != "" {
-			Board.Stats[Board.StatCount].Data = template.Data
+		if template.Data != nil {
+			// a copy of its own, as ZZT allocated one
+			data := *template.Data
+			Board.Stats[Board.StatCount].Data = &data
 		}
 		if ElementDefs[Board.Tiles[tx][ty].Element].PlaceableOnTop {
 			Board.Tiles[tx][ty].Color = byte(color&0x0F + int16(Board.Tiles[tx][ty].Color)&0x70)
@@ -890,15 +893,18 @@ func AddStat(tx, ty int16, element byte, color, tcycle int16, template TStat) {
 }
 
 func RemoveStat(statId int16) {
+	if statId < 0 { // a tile without a stat (see statRef)
+		return
+	}
 	var i int16
 	stat := &Board.Stats[statId]
 	if stat.DataLen != 0 {
 		for i = 1; i <= Board.StatCount; i++ {
-			if Board.Stats[i].Data == stat.Data && i != statId {
+			if stat.Data != nil && Board.Stats[i].Data == stat.Data && i != statId {
 				goto StatDataInUse
 			}
 		}
-		stat.Data = ""
+		stat.Data = nil
 	}
 StatDataInUse:
 	if statId < CurrentStatTicked {
@@ -972,6 +978,9 @@ func BoardPrepareTileForPlacement(x, y int16) (BoardPrepareTileForPlacement bool
 }
 
 func MoveStat(statId int16, newX, newY int16) {
+	if statId < 0 { // a tile without a stat (see statRef)
+		return
+	}
 	var (
 		iUnder     TTile
 		ix, iy     int16
@@ -1119,6 +1128,9 @@ func DisplayMessage(time int16, message string) {
 }
 
 func DamageStat(attackerStatId int16) {
+	if attackerStatId < 0 { // a tile without a stat (see statRef)
+		return
+	}
 	var oldX, oldY int16
 	stat := &Board.Stats[attackerStatId]
 	if attackerStatId == 0 {
@@ -1289,7 +1301,7 @@ func GameDebugPrompt() {
 	PromptString(63, 5, 0x1E, 0x0F, 11, PROMPT_ANY, &input)
 	input = UpCaseString(input)
 	toggle = true
-	if input[0] == '+' || input[0] == '-' {
+	if len(input) > 0 && (input[0] == '+' || input[0] == '-') {
 		if input[0] == '-' {
 			toggle = false
 		}

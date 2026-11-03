@@ -14,7 +14,7 @@ func OopError(statId int16, message string) {
 func OopReadChar(statId int16, position *int16) {
 	stat := &Board.Stats[statId]
 	if *position >= 0 && *position < stat.DataLen {
-		OopChar = stat.Data[*position]
+		OopChar = (*stat.Data)[*position]
 		*position++
 	} else {
 		OopChar = '\x00'
@@ -32,7 +32,9 @@ func OopReadWord(statId int16, position *int16) {
 	OopChar = UpCase(OopChar)
 	if OopChar < '0' || OopChar > '9' {
 		for OopChar >= 'A' && OopChar <= 'Z' || OopChar == ':' || OopChar >= '0' && OopChar <= '9' || OopChar == '_' {
-			OopWord += string([]byte{OopChar})
+			if len(OopWord) < 20 { // string[20] in ZZT: the rest is dropped
+				OopWord += string([]byte{OopChar})
+			}
 			OopReadChar(statId, position)
 			OopChar = UpCase(OopChar)
 		}
@@ -210,7 +212,7 @@ func OopIterateStat(statId int16, iStat *int16, lookup string) (OopIterateStat b
 		}
 	} else {
 		for *iStat <= Board.StatCount && !found {
-			if Board.Stats[*iStat].Data != "" {
+			if Board.Stats[*iStat].Data != nil && *Board.Stats[*iStat].Data != "" {
 				pos = 0
 				OopReadChar(*iStat, &pos)
 				if OopChar == '@' {
@@ -241,14 +243,14 @@ func OopFindLabel(statId int16, sendLabel string, iStat, iDataPos *int16, labelP
 	targetSplitPos = Pos(':', sendLabel)
 	if targetSplitPos <= 0 {
 		if *iStat < statId {
-			objectMessage = sendLabel
+			objectMessage = trunc20(sendLabel)
 			*iStat = statId
 			targetSplitPos = 0
 			foundStat = true
 		}
 	} else {
-		targetLookup = Copy(sendLabel, 1, targetSplitPos-1)
-		objectMessage = Copy(sendLabel, targetSplitPos+1, Length(sendLabel)-targetSplitPos)
+		targetLookup = trunc20(Copy(sendLabel, 1, targetSplitPos-1))
+		objectMessage = trunc20(Copy(sendLabel, targetSplitPos+1, Length(sendLabel)-targetSplitPos))
 		foundStat = OopIterateStat(statId, iStat, targetLookup)
 	}
 FindNextStat:
@@ -660,14 +662,17 @@ StartParsing:
 					OopReadWord(statId, position)
 					labelStatId = 0
 					for OopFindLabel(statId, OopWord, &labelStatId, &labelDataPos, "\r:") {
-						Board.Stats[labelStatId].Data = Replace(Board.Stats[labelStatId].Data, labelDataPos+1, '\'')
+						// ZZT writes the byte after the found "\r", the label's ':'
+						data := Board.Stats[labelStatId].Data
+						*data = Replace(*data, labelDataPos+2, '\'')
 					}
 				} else if OopWord == "RESTORE" {
 					OopReadWord(statId, position)
 					labelStatId = 0
 					for OopFindLabel(statId, OopWord, &labelStatId, &labelDataPos, "\r'") {
 						for {
-							Board.Stats[labelStatId].Data = Replace(Board.Stats[labelStatId].Data, labelDataPos+1, ':')
+							data := Board.Stats[labelStatId].Data
+							*data = Replace(*data, labelDataPos+2, ':')
 							labelDataPos = OopFindString(labelStatId, "\r'"+OopWord+"\r")
 							if labelDataPos <= 0 {
 								break
@@ -815,4 +820,12 @@ StartParsing:
 		DamageStat(statId)
 		OopPlaceTile(ix, iy, &replaceTile)
 	}
+}
+
+// trunc20 cuts s as ZZT's string[20] variables did.
+func trunc20(s string) string {
+	if len(s) > 20 {
+		return s[:20]
+	}
+	return s
 }

@@ -7,7 +7,6 @@ TODO:
 - editor: EditorTransferBoard
 - performance
   + optimize when to call VideoShow
-  + stat.Data should probably be []byte instead of string
 */
 
 package main

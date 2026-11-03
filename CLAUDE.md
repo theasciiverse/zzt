@@ -68,7 +68,17 @@ in colour, sidebar, moving about. Gaps, from Ben Hoyt's write-up
    `--mute`)
 4. The PC character set in Unicode: was already done (`codePage437ToRune`);
    colours now the exact EGA palette
-5. ZZT-OOP: line-by-line comparison against the Reconstruction under way
+5. ZZT-OOP: **done** (oop.go, elements.go and game.go compared line by
+   line with OOP.PAS, ELEMENTS.PAS and GAME.PAS, the element table
+   mechanically; fixed, each with a test in `oop_test.go`: #ZAP and
+   #RESTORE wrote one byte early, so Town's Jazzman never got his labels
+   back; saves lost the flags (never written, and the buffer was not
+   cleared); a stat without code kept the last board's, so a later
+   object could be saved bound to it and lose its code; #BIND copies
+   shared nothing (`Data` is now a shared `*string`, as ZZT's pointer);
+   black keys and doors crashed (now ZZT's gem high byte); words and labels
+   past 20 characters matched (ZZT's string[20] cuts them); statless
+   objects, bombs and pushers crashed; an empty debug prompt crashed)
 6. About screen, editor transfer: **done** (help from the Reconstruction's
    DOC/*.HLP embedded, `help/`; About at start; T in the editor)
 7. Session logging, data folder: **done** (`ZZT_LOG=1 zzt 2>zzt.log`;

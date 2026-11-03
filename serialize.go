@@ -128,6 +128,7 @@ func LoadStat(src []byte, stat *TStat) {
 	stat.Under.Color = src[16]
 	stat.DataPos = LoadInt16(src[21:23])
 	stat.DataLen = LoadInt16(src[23:25])
+	stat.Data = nil // set from the board's code after, if it has any
 }
 
 // Serialize world info struct into dest
@@ -146,6 +147,9 @@ func StoreWorldInfo(dest []byte, info *TWorldInfo) {
 	dest[22] = 0
 	StoreInt16(dest[23:25], info.Score)
 	StoreString(dest[25:46], info.Name)
+	for i := range info.Flags {
+		StoreString(dest[46+i*21:67+i*21], info.Flags[i])
+	}
 	StoreInt16(dest[256:258], info.BoardTimeSec)
 	StoreInt16(dest[258:260], info.BoardTimeHsec)
 	dest[260] = byte(BoolToInt(info.IsSave))

@@ -207,11 +207,11 @@ func ElementCentipedeHeadTick(statId int16) {
 			ix = stat2.StepX
 			iy = stat2.StepY
 			if stat2.Follower < 0 {
-				if Board.Tiles[tx-ix][ty-iy].Element == E_CENTIPEDE_SEGMENT && Board.Stats[GetStatIdAt(tx-ix, ty-iy)].Leader < 0 {
+				if Board.Tiles[tx-ix][ty-iy].Element == E_CENTIPEDE_SEGMENT && statRef(GetStatIdAt(tx-ix, ty-iy)).Leader < 0 {
 					stat2.Follower = GetStatIdAt(tx-ix, ty-iy)
-				} else if Board.Tiles[tx-iy][ty-ix].Element == E_CENTIPEDE_SEGMENT && Board.Stats[GetStatIdAt(tx-iy, ty-ix)].Leader < 0 {
+				} else if Board.Tiles[tx-iy][ty-ix].Element == E_CENTIPEDE_SEGMENT && statRef(GetStatIdAt(tx-iy, ty-ix)).Leader < 0 {
 					stat2.Follower = GetStatIdAt(tx-iy, ty-ix)
-				} else if Board.Tiles[tx+iy][ty+ix].Element == E_CENTIPEDE_SEGMENT && Board.Stats[GetStatIdAt(tx+iy, ty+ix)].Leader < 0 {
+				} else if Board.Tiles[tx+iy][ty+ix].Element == E_CENTIPEDE_SEGMENT && statRef(GetStatIdAt(tx+iy, ty+ix)).Leader < 0 {
 					stat2.Follower = GetStatIdAt(tx+iy, ty+ix)
 				}
 
@@ -473,7 +473,7 @@ func ElementConveyorCCWTick(statId int16) {
 }
 
 func ElementBombDraw(x, y int16, ch *byte) {
-	stat := &Board.Stats[GetStatIdAt(x, y)]
+	stat := statRef(GetStatIdAt(x, y))
 	if stat.P1 <= 1 {
 		*ch = 11
 	} else {
@@ -507,7 +507,7 @@ func ElementBombTick(statId int16) {
 }
 
 func ElementBombTouch(x, y int16, sourceStatId int16, deltaX, deltaY *int16) {
-	stat := &Board.Stats[GetStatIdAt(x, y)]
+	stat := statRef(GetStatIdAt(x, y))
 	if stat.P1 == 0 {
 		stat.P1 = 9
 		BoardDrawTile(int16(stat.X), int16(stat.Y))
@@ -526,7 +526,7 @@ func ElementTransporterMove(x, y, deltaX, deltaY int16) {
 		finishSearch bool
 		isValidDest  bool
 	)
-	stat := &Board.Stats[GetStatIdAt(x+deltaX, y+deltaY)]
+	stat := statRef(GetStatIdAt(x+deltaX, y+deltaY))
 	if deltaX == stat.StepX && deltaY == stat.StepY {
 		ix = int16(stat.X)
 		iy = int16(stat.Y)
@@ -582,7 +582,7 @@ func ElementTransporterTick(statId int16) {
 }
 
 func ElementTransporterDraw(x, y int16, ch *byte) {
-	stat := &Board.Stats[GetStatIdAt(x, y)]
+	stat := statRef(GetStatIdAt(x, y))
 	if stat.StepX == 0 {
 		*ch = Ord(TransporterNSChars[stat.StepY*2+3+CurrentTick/stat.Cycle%4-1])
 	} else {
@@ -811,7 +811,7 @@ func ElementPushablePush(x, y int16, deltaX, deltaY int16) {
 }
 
 func ElementDuplicatorDraw(x, y int16, ch *byte) {
-	stat := &Board.Stats[GetStatIdAt(x, y)]
+	stat := statRef(GetStatIdAt(x, y))
 	switch stat.P1 {
 	case 1:
 		*ch = 250
@@ -843,7 +843,7 @@ func ElementObjectTick(statId int16) {
 }
 
 func ElementObjectDraw(x, y int16, ch *byte) {
-	*ch = Board.Stats[GetStatIdAt(x, y)].P1
+	*ch = statRef(GetStatIdAt(x, y)).P1
 }
 
 func ElementObjectTouch(x, y int16, sourceStatId int16, deltaX, deltaY *int16) {
@@ -915,17 +915,60 @@ func ElementScrollTouch(x, y int16, sourceStatId int16, deltaX, deltaY *int16) {
 	RemoveStat(GetStatIdAt(x, y))
 }
 
+// Keys 1 to 7 are World.Info.Keys. A black key or door (colour 0) made ZZT
+// read the byte before that array, the high byte of the gem count: taking a
+// black key sets it to 1 (256 more gems), a black door opens when it is
+// non-zero and clears it. Kept, since worlds use it; the colour name there
+// was whatever lay before ZZT's name table, here "Black".
+// statRef is the stat with id i. A tile with no stat (a statless object,
+// bomb or pusher, made in an editor) gives -1, which ZZT read as whatever
+// lay before the array; here a blank stat, so such worlds play on.
+func statRef(i int16) *TStat {
+	if i < 0 {
+		blankStat = TStat{}
+		return &blankStat
+	}
+	return &Board.Stats[i]
+}
+
+var blankStat TStat
+
+func keyHeld(key int16) bool {
+	if key == 0 {
+		return uint16(World.Info.Gems)>>8 != 0
+	}
+	return World.Info.Keys[key-1]
+}
+
+func keySet(key int16, held bool) {
+	if key == 0 {
+		World.Info.Gems = int16(uint16(World.Info.Gems) & 0xFF)
+		if held {
+			World.Info.Gems = int16(uint16(World.Info.Gems) | 0x100)
+		}
+		return
+	}
+	World.Info.Keys[key-1] = held
+}
+
+func keyName(key int16) string {
+	if key == 0 {
+		return "Black"
+	}
+	return keyName(key)
+}
+
 func ElementKeyTouch(x, y int16, sourceStatId int16, deltaX, deltaY *int16) {
 	var key int16
 	key = int16(Board.Tiles[x][y].Color) % 8
-	if World.Info.Keys[key-1] {
-		DisplayMessage(200, "You already have a "+ColorNames[key-1]+" key!")
+	if keyHeld(key) {
+		DisplayMessage(200, "You already have a "+keyName(key)+" key!")
 		SoundQueue(2, "0\x02 \x02")
 	} else {
-		World.Info.Keys[key-1] = true
+		keySet(key, true)
 		Board.Tiles[x][y].Element = E_EMPTY
 		GameUpdateSidebar()
-		DisplayMessage(200, "You now have the "+ColorNames[key-1]+" key.")
+		DisplayMessage(200, "You now have the "+keyName(key)+" key.")
 		SoundQueue(2, "@\x01D\x01G\x01@\x01D\x01G\x01@\x01D\x01G\x01P\x02")
 	}
 }
@@ -963,15 +1006,15 @@ func ElementPassageTouch(x, y int16, sourceStatId int16, deltaX, deltaY *int16) 
 func ElementDoorTouch(x, y int16, sourceStatId int16, deltaX, deltaY *int16) {
 	var key int16
 	key = int16(Board.Tiles[x][y].Color) / 16 % 8
-	if World.Info.Keys[key-1] {
+	if keyHeld(key) {
 		Board.Tiles[x][y].Element = E_EMPTY
 		BoardDrawTile(x, y)
-		World.Info.Keys[key-1] = false
+		keySet(key, false)
 		GameUpdateSidebar()
-		DisplayMessage(200, "The "+ColorNames[key-1]+" door is now open.")
+		DisplayMessage(200, "The "+keyName(key)+" door is now open.")
 		SoundQueue(3, "0\x017\x01;\x010\x017\x01;\x01@\x04")
 	} else {
-		DisplayMessage(200, "The "+ColorNames[key-1]+" door is locked!")
+		DisplayMessage(200, "The "+keyName(key)+" door is locked!")
 		SoundQueue(3, "\x17\x01\x10\x01")
 	}
 }
@@ -982,7 +1025,7 @@ func ElementPushableTouch(x, y int16, sourceStatId int16, deltaX, deltaY *int16)
 }
 
 func ElementPusherDraw(x, y int16, ch *byte) {
-	stat := &Board.Stats[GetStatIdAt(x, y)]
+	stat := statRef(GetStatIdAt(x, y))
 	if stat.StepX == 1 {
 		*ch = 16
 	} else if stat.StepX == -1 {

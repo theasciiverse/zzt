@@ -70,7 +70,7 @@ type (
 		Follower     int16
 		Leader       int16
 		Under        TTile
-		Data         string // TODO: this should probably be []byte as ZAP/RESTORE modify it
+		Data         *string // shared by objects bound with #BIND, as in ZZT; nil for none
 		DataPos      int16
 		DataLen      int16
 		unk1, unk2   *uintptr
