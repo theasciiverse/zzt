@@ -135,7 +135,7 @@ func InputKeyPoller(screen tcell.Screen, keyChan chan byte) {
 		case *tcell.EventResize:
 			w, h := event.Size()
 			logf("resize %dx%d", w, h)
-			screen.Sync()
+			VideoRedraw()
 		}
 	}
 }

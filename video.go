@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -15,6 +16,49 @@ var screen tcell.Screen
 // most 60 times a second. (zztgo showed the screen after every write, which
 // sent several megabytes of tiny updates a second on the title screen.)
 var videoDirty int32
+
+// ZZT's 80x25 text screen, kept here and drawn centred in the terminal
+// with black around it, so a resize can draw it again where it now goes.
+const videoCols, videoRows = 80, 25
+
+var (
+	videoMu         sync.Mutex
+	videoCells      [videoRows][videoCols]VideoCell
+	videoOffX       int
+	videoOffY       int
+	videoBlackStyle tcell.Style
+)
+
+func videoPut(x, y int, c VideoCell) {
+	if x < 0 || y < 0 || x >= videoCols || y >= videoRows {
+		return
+	}
+	videoCells[y][x] = c
+	screen.SetContent(videoOffX+x, videoOffY+y, c.Rune, nil, c.Style)
+}
+
+// VideoRedraw places the screen for the terminal's size and draws it all.
+func VideoRedraw() {
+	videoMu.Lock()
+	defer videoMu.Unlock()
+	w, h := screen.Size()
+	videoOffX, videoOffY = 0, 0
+	if w > videoCols {
+		videoOffX = (w - videoCols) / 2
+	}
+	if h > videoRows {
+		videoOffY = (h - videoRows) / 2
+	}
+	screen.SetStyle(videoBlackStyle)
+	screen.Clear()
+	for y := 0; y < videoRows; y++ {
+		for x := 0; x < videoCols; x++ {
+			c := videoCells[y][x]
+			screen.SetContent(videoOffX+x, videoOffY+y, c.Rune, nil, c.Style)
+		}
+	}
+	screen.Sync()
+}
 
 func videoFlusher() {
 	t := time.NewTicker(16 * time.Millisecond)
@@ -37,10 +81,13 @@ func VideoInstall() {
 		fmt.Fprintf(os.Stderr, "error initializing screen: %v", err)
 		os.Exit(1)
 	}
-	screen.SetStyle(tcell.StyleDefault.
-		Foreground(tcell.ColorWhite).
-		Background(tcell.ColorBlack))
-	screen.Clear()
+	videoBlackStyle = tcell.StyleDefault.Foreground(crtColorToTcell[CrtLightGray]).Background(crtColorToTcell[CrtBlack])
+	for y := range videoCells {
+		for x := range videoCells[y] {
+			videoCells[y][x] = VideoCell{' ', videoBlackStyle}
+		}
+	}
+	VideoRedraw()
 
 	// TODO: doesn't really belong in "video" install, but oh well
 	InputStartPoller(screen)
@@ -48,7 +95,14 @@ func VideoInstall() {
 }
 
 func VideoClrScr() {
-	screen.Clear()
+	videoMu.Lock()
+	for y := 0; y < videoRows; y++ {
+		for x := 0; x < videoCols; x++ {
+			videoPut(x, y, VideoCell{' ', videoBlackStyle})
+		}
+	}
+	videoMu.Unlock()
+	atomic.StoreInt32(&videoDirty, 1)
 }
 
 func VideoWriteText(x, y int16, color byte, text string) {
@@ -56,11 +110,11 @@ func VideoWriteText(x, y int16, color byte, text string) {
 	bg := color >> 4
 	style := tcell.StyleDefault.Foreground(crtColorToTcell[fg]).
 		Background(crtColorToTcell[bg])
+	videoMu.Lock()
 	for i := 0; i < len(text); i++ {
-		ch := text[i]
-		r := codePage437ToRune[ch]
-		screen.SetContent(int(x)+i, int(y), r, nil, style)
+		videoPut(int(x)+i, int(y), VideoCell{codePage437ToRune[text[i]], style})
 	}
+	videoMu.Unlock()
 	atomic.StoreInt32(&videoDirty, 1)
 }
 
@@ -70,18 +124,22 @@ type VideoCell struct {
 }
 
 func VideoMoveToVideo(x, y, width int16, cells []VideoCell) {
-	for i := 0; i < int(x+width); i++ {
-		cell := cells[i]
-		screen.SetContent(int(x)+i, int(y), cell.Rune, nil, cell.Style)
+	videoMu.Lock()
+	for i := 0; i < int(width); i++ {
+		videoPut(int(x)+i, int(y), cells[i])
 	}
+	videoMu.Unlock()
 	atomic.StoreInt32(&videoDirty, 1)
 }
 
 func VideoMoveToBuffer(x, y, width int16, cells []VideoCell) {
-	for i := 0; i < int(x+width); i++ {
-		r, _, style, _ := screen.GetContent(int(x)+i, int(y))
-		cells[i] = VideoCell{r, style}
+	videoMu.Lock()
+	for i := 0; i < int(width); i++ {
+		if int(x)+i < videoCols && int(y) < videoRows {
+			cells[i] = videoCells[y][int(x)+i]
+		}
 	}
+	videoMu.Unlock()
 }
 
 // VideoShow marks the screen as changed; it is shown within a frame.
