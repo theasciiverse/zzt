@@ -1,4 +1,6 @@
-package main // unit: Sounds
+package main
+
+import "time" // unit: Sounds
 
 type TDrumData struct {
 	Len  int16
@@ -120,32 +122,19 @@ func SoundCheckTimeIntr() {
 	//SoundTimeCheckHsec = int16(hSec)
 }
 
-func SoundHasTimeElapsed(counter *int16, duration int16) (SoundHasTimeElapsed bool) {
-	return true
-	// var (
-	// 	hour, minute, sec, hSec uint16
-	// 	hSecsDiff               uint16
-	// 	hSecsTotal              int16
-	// )
-	// if SoundTimeCheckCounter > 0 && SoundTimeCheckCounter%2 == 1 {
-	// 	SoundTimeCheckCounter--
-	// 	SoundCheckTimeIntr()
-	// }
-	// if UseSystemTimeForElapsed {
-	// 	GetTime(&hour, &minute, &sec, &hSec)
-	// 	hSecsTotal = int16(sec*100 + hSec)
-	// 	hSecsDiff = uint16(hSecsTotal-*counter+6000) % 6000
-	// } else {
-	// 	hSecsTotal = int16(TimerTicks * 6)
-	// 	hSecsDiff = uint16(hSecsTotal - *counter)
-	// }
-	// if hSecsDiff >= uint16(duration) {
-	// 	SoundHasTimeElapsed = true
-	// 	*counter = hSecsTotal
-	// } else {
-	// 	SoundHasTimeElapsed = false
-	// }
-	// return
+var soundClockStart = time.Now()
+
+// SoundHasTimeElapsed reports whether duration hundredths of a second have
+// passed since *counter, and if so moves *counter on to now. ZZT counts in
+// hundredths, wrapping each minute (the system-time path of the original).
+func SoundHasTimeElapsed(counter *int16, duration int16) bool {
+	hSecsTotal := int16(time.Since(soundClockStart).Milliseconds() / 10 % 6000)
+	hSecsDiff := uint16(hSecsTotal-*counter+6000) % 6000
+	if hSecsDiff >= uint16(duration) {
+		*counter = hSecsTotal
+		return true
+	}
+	return false
 }
 
 func SoundTimerHandler() {

@@ -1472,6 +1472,9 @@ func GamePlayLoop(boardChanged bool) {
 				CurrentTick = Random(100)
 				CurrentStatTicked = Board.StatCount + 1
 				World.Info.IsSave = true
+			} else {
+				// still paused: ZZT polled the keyboard flat out here
+				time.Sleep(10 * time.Millisecond)
 			}
 		} else { // not GamePaused
 			if CurrentStatTicked <= Board.StatCount {
@@ -1486,10 +1489,10 @@ func GamePlayLoop(boardChanged bool) {
 		if CurrentStatTicked > Board.StatCount && !GamePlayExitRequested {
 			// all stats ticked
 
-			// TODO: should wait till next TickTimeCounter/TickTimeDuration up
-			time.Sleep(time.Duration(TickTimeDuration) * 10 * time.Millisecond)
-
-			if SoundHasTimeElapsed(&TickTimeCounter, TickTimeDuration) {
+			if !SoundHasTimeElapsed(&TickTimeCounter, TickTimeDuration) {
+				// wait for the next tick without spinning
+				time.Sleep(2 * time.Millisecond)
+			} else {
 				// next cycle
 				CurrentTick++
 				if CurrentTick > 420 {
