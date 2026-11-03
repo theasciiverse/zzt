@@ -24,8 +24,14 @@ const help = `zzt [WORLD] [--mute]
 
 ZZT, Tim Sweeney's 1991 text-mode adventure and world editor. Starts on
 the title screen with WORLD (default TOWN, The Town of ZZT); W picks another
-world, P plays, E opens the editor. In play: arrows move, Shift+arrows (or
-Space) shoot, T torch, B sound off and on, S save, P pause, Esc quits.
+world, P plays, E opens the editor.
+
+Worlds, saved games and high scores live in the data folder
+(~/.local/share/zzt on Linux); put .ZZT worlds there and W lists them.
+WORLD given as a path (zzt ~/worlds/FOO.ZZT) plays from that folder.
+
+In play: arrows move, Shift+arrows (or Space) shoot, T torch, B sound off
+and on, S save, P pause, H help, Esc quits.
 
   --mute     start with the sound off
 
@@ -46,7 +52,7 @@ func main() {
 		case a == "--mute":
 			muted = true
 		case !strings.HasPrefix(a, "-"):
-			startWorld = strings.TrimSuffix(strings.TrimSuffix(a, ".ZZT"), ".zzt")
+			startWorld = a
 		}
 	}
 
@@ -66,6 +72,7 @@ func main() {
 	WorldFileDescKeys[6] = "TOUR"
 	WorldFileDescValues[6] = "TOUR       Guided Tour ZZT's Other Worlds"
 
+	startWorld = DataDirSetup(startWorld)
 	StartupWorldFileName = "TOWN"
 	if startWorld != "" {
 		StartupWorldFileName = startWorld

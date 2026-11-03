@@ -116,6 +116,7 @@ func InputKeyPoller(screen tcell.Screen, keyChan chan byte) {
 		event := screen.PollEvent()
 		switch event := event.(type) {
 		case *tcell.EventKey:
+			logf("key %s rune %q mods %d", event.Name(), event.Rune(), event.Modifiers())
 			// tcell v2 reads the modifier from the key itself (Shift+arrows shoot)
 			KeysShiftHeld = event.Modifiers()&tcell.ModShift != 0
 
@@ -132,6 +133,8 @@ func InputKeyPoller(screen tcell.Screen, keyChan chan byte) {
 				}
 			}
 		case *tcell.EventResize:
+			w, h := event.Size()
+			logf("resize %dx%d", w, h)
 			screen.Sync()
 		}
 	}

@@ -1141,6 +1141,7 @@ func DrawPlayerSurroundings(x, y int16, bombPhase int16) {
 }
 
 func GamePromptEndPlay() {
+	logf("asked to end play")
 	if World.Info.Health <= 0 {
 		GamePlayExitRequested = true
 		BoardDrawBorder()

@@ -128,12 +128,15 @@ func SoundCheckTimeIntr() {
 
 var soundClockStart = time.Now()
 
-// SoundHasTimeElapsed reports whether duration hundredths of a second have
-// passed since *counter, and if so moves *counter on to now. ZZT counts in
-// hundredths, wrapping each minute (the system-time path of the original).
+// SoundHasTimeElapsed reports whether duration "hundredths" have passed
+// since *counter, and if so moves *counter on to now. As in ZZT, time is
+// counted in PC timer ticks (18.2 a second) times six, so a hundredth is
+// really 1/109 s: at the default speed a cycle takes two ticks, 9.1 cycles
+// a second.
 func SoundHasTimeElapsed(counter *int16, duration int16) bool {
-	hSecsTotal := int16(time.Since(soundClockStart).Milliseconds() / 10 % 6000)
-	hSecsDiff := uint16(hSecsTotal-*counter+6000) % 6000
+	ticks := uint16(time.Since(soundClockStart) * 1193182 / 65536 / time.Second)
+	hSecsTotal := int16(ticks * 6)
+	hSecsDiff := uint16(hSecsTotal - *counter)
 	if hSecsDiff >= uint16(duration) {
 		*counter = hSecsTotal
 		return true

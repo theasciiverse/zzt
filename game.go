@@ -183,6 +183,7 @@ func BoardOpen(boardId int16) {
 }
 
 func BoardChange(boardId int16) {
+	logf("board %d -> %d", World.Info.CurrentBoard, boardId)
 	Board.Tiles[Board.Stats[0].X][Board.Stats[0].Y].Element = E_PLAYER
 	Board.Tiles[Board.Stats[0].X][Board.Stats[0].Y].Color = ElementDefs[E_PLAYER].Color
 	BoardClose()
@@ -1431,7 +1432,15 @@ func GamePlayLoop(boardChanged bool) {
 	CurrentTick = Random(100)
 	CurrentStatTicked = Board.StatCount + 1
 
+	logf("play loop: %s, world %q board %d %q", map[bool]string{true: "playing", false: "title"}[GameStateElement == E_PLAYER], World.Info.Name, World.Info.CurrentBoard, Board.Name)
+	lastSnapshot := time.Now()
 	for !GamePlayExitRequested {
+		if logOn && time.Since(lastSnapshot) >= 500*time.Millisecond {
+			lastSnapshot = time.Now()
+			logf("snapshot board %d %q player %d,%d health %d ammo %d gems %d torches %d keys %v score %d paused %v tick %d speed %d sound %v",
+				World.Info.CurrentBoard, Board.Name, Board.Stats[0].X, Board.Stats[0].Y, World.Info.Health, World.Info.Ammo,
+				World.Info.Gems, World.Info.Torches, World.Info.Keys, World.Info.Score, GamePaused, CurrentTick, TickSpeed, SoundEnabled)
+		}
 		if GamePaused {
 			if SoundHasTimeElapsed(&TickTimeCounter, 25) {
 				pauseBlink = !pauseBlink
@@ -1470,6 +1479,7 @@ func GamePlayLoop(boardChanged bool) {
 				}
 
 				// Unpause
+				logf("unpaused")
 				GamePaused = false
 				SidebarClearLine(5)
 				CurrentTick = Random(100)
@@ -1510,6 +1520,7 @@ func GamePlayLoop(boardChanged bool) {
 	SoundClearQueue()
 	if GameStateElement == E_PLAYER {
 		if World.Info.Health <= 0 {
+			logf("game over, score %d", World.Info.Score)
 			HighScoresAdd(World.Info.Score)
 		}
 	} else if GameStateElement == E_MONITOR {
