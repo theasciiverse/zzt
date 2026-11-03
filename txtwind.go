@@ -429,7 +429,14 @@ func TextWindowOpenFile(filename string, state *TTextWindowState) {
 	}
 
 	if entryPos <= 0 {
-		f, err := os.Open(filename)
+		// ZZT.DAT's documentation is built into the binary (help/); a
+		// file of the same name beside the game wins, as in ZZT.
+		var f io.ReadCloser
+		var err error
+		f, err = os.Open(filename)
+		if err != nil && entryPos == 0 {
+			f, err = helpFiles.Open("help/" + UpCaseString(filename))
+		}
 		var reader *bufio.Reader
 		if err == nil {
 			reader = bufio.NewReader(f)
@@ -437,13 +444,15 @@ func TextWindowOpenFile(filename string, state *TTextWindowState) {
 		for err == nil {
 			var line string
 			line, err = reader.ReadString('\n')
-			if err != io.EOF {
+			if err != io.EOF || line != "" {
 				line = strings.TrimRight(line, "\r\n")
 				state.LineCount++
 				state.Lines[state.LineCount-1] = line
 			}
 		}
-		f.Close()
+		if f != nil {
+			f.Close()
+		}
 	} else {
 		f, err := os.Open(ResourceDataFileName)
 		if err == nil {

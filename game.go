@@ -1401,7 +1401,7 @@ func GamePlayLoop(boardChanged bool) {
 	GameUpdateSidebar()
 
 	if JustStarted {
-		// TODO: GameAboutScreen()
+		GameAboutScreen()
 		if Length(StartupWorldFileName) != 0 {
 			SidebarClearLine(8)
 			VideoWriteText(69, 8, 0x1F, StartupWorldFileName)
