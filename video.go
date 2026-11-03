@@ -3,11 +3,27 @@ package main
 import (
 	"fmt"
 	"os"
+	"sync/atomic"
+	"time"
 
 	"github.com/gdamore/tcell"
 )
 
 var screen tcell.Screen
+
+// Writes only mark the screen as changed; videoFlusher shows the changes at
+// most 60 times a second. (zztgo showed the screen after every write, which
+// sent several megabytes of tiny updates a second on the title screen.)
+var videoDirty int32
+
+func videoFlusher() {
+	t := time.NewTicker(16 * time.Millisecond)
+	for range t.C {
+		if atomic.SwapInt32(&videoDirty, 0) == 1 {
+			screen.Show()
+		}
+	}
+}
 
 func VideoInstall() {
 	var err error
@@ -28,6 +44,7 @@ func VideoInstall() {
 
 	// TODO: doesn't really belong in "video" install, but oh well
 	InputStartPoller(screen)
+	go videoFlusher()
 }
 
 func VideoClrScr() {
@@ -44,7 +61,7 @@ func VideoWriteText(x, y int16, color byte, text string) {
 		r := codePage437ToRune[ch]
 		screen.SetContent(int(x)+i, int(y), r, nil, style)
 	}
-	VideoShow() // TODO: is this inefficient?
+	atomic.StoreInt32(&videoDirty, 1)
 }
 
 type VideoCell struct {
@@ -57,7 +74,7 @@ func VideoMoveToVideo(x, y, width int16, cells []VideoCell) {
 		cell := cells[i]
 		screen.SetContent(int(x)+i, int(y), cell.Rune, nil, cell.Style)
 	}
-	VideoShow()
+	atomic.StoreInt32(&videoDirty, 1)
 }
 
 func VideoMoveToBuffer(x, y, width int16, cells []VideoCell) {
@@ -67,8 +84,9 @@ func VideoMoveToBuffer(x, y, width int16, cells []VideoCell) {
 	}
 }
 
+// VideoShow marks the screen as changed; it is shown within a frame.
 func VideoShow() {
-	screen.Show()
+	atomic.StoreInt32(&videoDirty, 1)
 }
 
 func VideoHideCursor() {
