@@ -116,7 +116,10 @@ func InputReadWaitKey() {
 }
 
 func InputStartPoller(screen tcell.Screen) {
-	keyChan = make(chan inputKey)
+	// Buffered, so every key that has arrived is waiting when the game looks:
+	// unbuffered, the game took one key a cycle and held keys piled up
+	// behind it (the player went on walking after the key was let go).
+	keyChan = make(chan inputKey, 1024)
 	go InputKeyPoller(screen, keyChan)
 }
 
