@@ -7,3 +7,4 @@ ZZT.DAT
 /zzt
 /zzt-test
 *.log
+!DEMO.ZZT

@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-const version = "1.0.0" // ours; the game is ZZT 3.2
+const version = "1.0.1" // ours; the game is ZZT 3.2
 
 const help = `zzt [WORLD] [--mute]
 
